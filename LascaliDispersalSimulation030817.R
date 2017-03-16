@@ -22,10 +22,9 @@
 # Structure of the data frame which holds all of the population information
    # Column 1: generation
    # Column 2: individual ID (number from 1 to pop size in the current generation)
-   # Column 3-12: dispersal loci (locus 1-1, locus 1-2, locus 2-1, locus 2-2, locus 3-1, locus 3-2, ..., locus 15-1, locus 15-2)
+   # Column 3-12: dispersal loci (col3 = locus 1-1, col4 = locus 1-2, col5 = locus 2-1, col6 = locus 2-2, col7 = locus 3-1, col8 = locus 3-2, col9 = locus 4-1, col10 = locus 4-2, col11 = locus 5-1, col12 = locus 5-2)
    # Column 13-22: environmental loci
    # Column 23-32: neutral loci
-   
    
 # Constants
 meta_cols <- 3 # the number of metadata columns in the matrix (generation number, individual number, location)
@@ -35,11 +34,28 @@ env_loci <- 5
 neut_loci <- 5
 total_genome_length <- diploid*(disp_loci+env_loci+neut_loci)
 max_gens <- 10000
-Rmax <- 0 #CHANGE ME
+Rmax <- 150 # (50 seeds per inflorescence, 3 inflorescences MAX)
+dispersal_kernel_distribution <- # WALD (inverse gaussian)
+sigma <- 1 # effective size of spatial neighbourhood
+nstar <- 1000
+a <- (Rmax - 1)/nstar
 
-dispersal_kernel_distribution <- #XXXXX CHOOSE THIS BASED ON LITERATURE
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# Calculates the expected fecundity of an individual
 
+R <- function(Rmax,k,zw){
+	Ri <- Rmax*exp(-k*(zw^2))
+	return(Ri)
+}
+
+# Calculates the expected number of offspring (as in Phillips 2015)
+expoffspring <- function(Rmax,k,zw,Nix){
+	
+	Ri <- R(Rmax,k,zw)
+	EO <- Ri/(1+a*Nix)
+	return(EO)
+}
 
 # A function to choose dad. This is a helper function for the offspring function
 
@@ -79,16 +95,13 @@ offspring <- function(mom, dad, current_population, generation, indiv_num){ # th
 	
 }
 
+reproduce <- function(mom, dad, nstar, pop_size){
+	# nstar is the population size that would be achieved if all individuals had Rmax fecundity. 
+	# pop_size is the current local population size
+	
+}
 # lasthenia californica will produce 1-3 inflorescences total, with 15-30 seeds per inflorescence. 
 
-# A function to describe the environment at every location
-
-# A function to describe the population growth in a given neighbourhood
-
-# A function to choose a mate from the population - weighs probability of mating by distance away
-
-# A function to calculate the dispersal phenotype 
-
-# A function to calculate the fitness phenotype
-
-# A function to calculate dispersal
+# step 1 - find a mate (matefinder)
+# step 2 - reproduce (offspring - makes one offspring, reproduce - calculates the number of offspring and then gets offspring function to make them)
+step 3 - 
