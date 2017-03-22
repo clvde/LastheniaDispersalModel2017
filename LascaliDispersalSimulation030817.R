@@ -21,9 +21,11 @@
 # Structure of the data frame which holds all of the population information
    # Column 1: generation
    # Column 2: individual ID (number from 1 to pop size in the current generation)
-   # Column 3-12: dispersal loci (col3 = locus 1-1, col4 = locus 1-2, col5 = locus 2-1, col6 = locus 2-2, col7 = locus 3-1, col8 = locus 3-2, col9 = locus 4-1, col10 = locus 4-2, col11 = locus 5-1, col12 = locus 5-2)
-   # Column 13-22: environmental loci
-   # Column 23-32: neutral loci
+   # Column 3: location
+   # Column 4-13: dispersal trait 1 (a = mean) loci (col3 = locus 1-1, col4 = locus 1-2, col5 = locus 2-1, col6 = locus 2-2, col7 = locus 3-1, col8 = locus 3-2, col9 = locus 4-1, col10 = locus 4-2, col11 = locus 5-1, col12 = locus 5-2)
+   # Column 14-23: dispersal trait 2 (b = shape) loci 
+   # Column 24-33: environmental loci
+   # Column 34-43: neutral loci
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    
@@ -49,12 +51,11 @@ b <- 1 # shape parameter of the inverse gaussian distribution
 p_recomb <- 0.0001
 p_mut <- 0.00001 # probability of mutation at every allele
 sigma_mut <- 0.001 # standard deviation of the mutation kernel
-env_width <- ####
+nbhd_width <- 1 # can set this equal to 1 without loss of generality as the whole environment can be large or small relative to this. 
 env_length <- ####
+env_width <- ####
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
 # Calculates the expected fecundity of an individual
 
 R <- function(Rmax,k,zw){
@@ -66,20 +67,27 @@ R <- function(Rmax,k,zw){
 # Calculates the expected number of offspring (as in Phillips 2015)
 
 expoffspring <- function(Rmax,k,zw,Nix){
-	
 	Ri <- R(Rmax,k,zw)
 	EO <- Ri/(1+alpha*Nix)
 	return(EO)
 }
 
 
-# Calculates the dispersal phenotype for an individual.
+# Calculates the first dispersal phenotype (a- mean distance) for an individual.
 
-zd <- function(individual,start_locus,total_loci){
+zda <- function(individual,start_locus,total_loci){
+	# this assumes that you have one vector describing an individual. entries 13-22 describe the dispersal alleles
+	end_locus <- total_loci+start_locus-1
+	zdispa <- sum(individual[start_locus:end_locus])
+	return(zdispa)
+}
+
+
+zdb <- function(individual,start_locus,total_loci){
 	# this assumes that you have one vector describing an individual. entries 13-22 describe the dispersal alleles
 	end_locus <- total_loci+start_locus-1
 	zdisp <- sum(individual[start_locus:end_locus])
-	return(zdisp)
+	return(zdispa)
 }
 
 
@@ -94,12 +102,6 @@ zw <- function(individuals,start_locus,total_loci){
 
 # A function to choose dad. This is a helper function for the offspring function
 
-matefinder < - function(current_population, neighbourhood_dist){
-	# neighbourhood_dist should be a probability density function that describes the width of a neighbourhood
-	
-	
-	
-}
 
 disperse1D <- function(mom_loc, zda, zdb){
 	# assumes mom's location is in one dimension
@@ -121,7 +123,7 @@ disperse1D <- function(mom_loc, zda, zdb){
 
 disperse2D <- function(mom_loc, zda, zdb){
 	
-	xm <- momloc[1] # assumes moms locatio
+	xm <- momloc[1] # assumes moms location
 	ym <- momloc[2]
 	theta <- 360*runif(1)
 	dist <- rinvgauss(1, zda, zdb)
@@ -166,13 +168,34 @@ disperse2D <- function(mom_loc, zda, zdb){
 		xb <- xm + dist*sin(360-theta)
 		yb <- ym + dist*cos(360-theta)
 		
-	}
+	}	
 	
+	baby_loc <- c(xb,yb)
 	
-
-	
+	return(baby_loc)
 	
 }
+
+
+matefinder1D < - function(mom, current_population, neighbourhood_dist){
+	# neighbourhood_dist should be a probability density function that describes the width of a neighbourhood
+	
+	# There are two ways I could write this function: (1) randomly choose a location using the normal distribution and then find the nearest individual to that point to mate with OR (2) find the probability of 	mating with every individual and then sample from that discrete distribution. I have a feeling the former will be faster? Especially if I could somehow search nearest that point for individuals. I should 	talk to Brett and Sam about this. 
+	
+	mate_loc <- rnorm(1,mom[3],nbhd_width)
+	popsize <- nrow(current_population)
+	locations <- current_population[,3]
+	mate_dists <- locations - mate_loc
+	min_list <- which(mate_dists == min(mate_dists))
+	if (length(min_list) > 1){
+		rand_choice <- sample(min_list,1)
+		mate <- current_population[rand_choice,]
+	} else{
+		mate <- min_list[1]
+	}
+	return(mate)	
+}
+
 
 # A function to produce one child to a given mom. This is a helper function for XXXXX
 	
@@ -183,11 +206,10 @@ offspring <- function(mom, dad, current_population, generation, indiv_num){ # th
 	baby <- matrix(0,nrow = 1, ncol = baby_vec_length)
 	baby[,1] <- generation
 	baby[,2] <- indiv_num
-	baby[,3] <- disperse(mom[,3],zd(mom),b,r)
+	baby[,3] <- disperse1D(mom[,3],zda(mom),zdb(mom))
 	
 	# create the baby's genome
 	locus_vec <- seq(from = 3, to = total_genome_length+2, by = 2)
-	
 	for (i in locus_vec){
 		if (i%%2 != 0){ # if this is an the first chromosome of a pair, inherit from mom at random
 			momallele = round(runif(1)) + i # choose either the allele at locus i_1 or at locus i_2
@@ -197,6 +219,9 @@ offspring <- function(mom, dad, current_population, generation, indiv_num){ # th
 				baby[,i+1] = dad[,dadallele]	
 			}
 	}
+	
+	# now mutate if needed
+	
 	
 	
 	
