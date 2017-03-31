@@ -5,7 +5,16 @@
 
 # The goal of this project is to set up a simulation modelling framework which can be used to describe the population dynamics and spread of annual, wind-dispersed grassland plants
 
-# Assumptions:
+# MAP OF THIS SCRIPT:
+
+# (1) Assumptions
+# (2) Constants
+# (3) Population Data Frame Creation
+# (4) Reproductive Functions
+# (5) Dispersal Functions
+# (6) The Environment
+ 
+# -------------------------------- (1) Assumptions: NEED TO COMPLETE THIS SECTION -------------------------------- 
 	# Discrete generations
 	# self-incompatible
 	# diploid organisms
@@ -16,49 +25,157 @@
 	# all seeds from a given mom are fathered by the same dad (this is probably unrealistic but we can change it after)
 	# hermaphroditic individuals
 	# free recombination (every locus is on a different chromosome). Probability of recombination constant between every locus
-	
-	
-# Structure of the data frame which holds all of the population information
-   # Column 1: generation
-   # Column 2: individual ID (number from 1 to pop size in the current generation)
-   # Column 3: location
-   # Column 4-13: dispersal trait 1 (a = mean) loci (col3 = locus 1-1, col4 = locus 1-2, col5 = locus 2-1, col6 = locus 2-2, col7 = locus 3-1, col8 = locus 3-2, col9 = locus 4-1, col10 = locus 4-2, col11 = locus 5-1, col12 = locus 5-2)
-   # Column 14-23: dispersal trait 2 (b = shape) loci 
-   # Column 24-33: environmental loci
-   # Column 34-43: neutral loci
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    
-# Constants
+# -------------------------------- (2) CONSTANTS -------------------------------- 
 
 meta_cols <- 3 # the number of metadata columns in the matrix (generation number, individual number, location)
 diploid <- 2
-disp_loci <- 5
+disp_a_loci <- 5
+disp_b_loci <- 5
 env_loci <- 5
 neut_loci <- 5
-total_genome_length <- diploid*(disp_loci+env_loci+neut_loci)
-fit_start_locus <- meta_cols+1
-fit_end_locus <- fit_start_locus+diploid*env_loci
-disp_start_locus <- meta_cols+1
-disp_end_locus 
+total_genome_length <- diploid*(disp_a_loci+disp_b_loci+env_loci+neut_loci)
 max_gens <- 10000
-Rmax <- 150 # (50 seeds per inflorescence, 3 inflorescences MAX)
-dispersal_kernel_distribution <- # WALD (inverse gaussian)
+Rmax_good <- 50 # (50 seeds per inflorescence, 1 inflorescence MAX)
+Rmax_bad <- 0
 sigma <- 1 # effective size of spatial neighbourhood
 nstar <- 1000
-alpha <- (Rmax - 1)/nstar
 b <- 1 # shape parameter of the inverse gaussian distribution
 p_recomb <- 0.0001
 p_mut <- 0.00001 # probability of mutation at every allele
 sigma_mut <- 0.001 # standard deviation of the mutation kernel
 nbhd_width <- 1 # can set this equal to 1 without loss of generality as the whole environment can be large or small relative to this. 
-env_length <- ####
-env_width <- ####
+env_length <- 10 # this should be varied so the gene flow (i.e. the neighbourhood size to environment size varies) as this may have consequences for dipsersal evo
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# -------------------------------- (3) POPULATION DATA FRAME CREATION -------------------------------- 
+
+# Structure of the data frame which holds all of the population information (number of metadata columns may change):
+   # Column 1: generation
+   # Column 2: individual ID (number from 1 to pop size in the current generation)
+   # Column 3: location
+   # Column 4-13: dispersal trait 1 (a = mean) loci (2 columns per locus because of diploidy)
+   # Column 14-23: dispersal trait 2 (b = shape) loci 
+   # Column 24-33: environmental loci
+   # Column 34-43: neutral loci
+
+current_population <- data.frame('generation' = 1, 'individual_ID' = 1:11, 'location' = seq(from = 0, to = 1, by = .1), 'rand' = seq(from = 0, to = 1, by = .1))
+
+meta_cols=ncol(current_population)
+disp_a_locus_1 <- meta_cols+1
+disp_a_locus_last <- disp_a_locus_1 + disp_a_loci*diploid - 1
+disp_b_locus_1 <- disp_a_locus_last + 1
+disp_b_locus_last <- disp_b_locus_1 + disp_b_loci*diploid - 1
+env_locus_1 <- disp_b_locus_last + 1
+env_locus_last <- env_locus_1 + env_loci*diploid - 1
+neut_locus_1 <- env_locus_last + 1
+neut_locus_last <- neut_locus_1 + neut_loci*diploid - 1
+
+# creates all of the necessary new columns for the loci
+for (i in seq(from=meta_cols, to=total_genome_length+meta_cols,by=1)){
+	current_population[,i] <- 0
+}
+
+# Names the columns properly
+
+for (i in meta_cols+1:ncol(current_population)){
+	# j = i-meta_cols
+	# k = round((j/2)+0.0000001) # round function in r round 0.5 to the even digit (i.e. 0. This is so weird.)
+	
+	if (meta_cols%%2 != 0){
+	
+		if (i%%2 == 0) {
+			if (4 <= i && i <= disp_a_locus_last){
+				j = i-meta_cols
+				k = round((j/2)+0.0000001)
+				colnames(current_population)[i] <- paste('dispa_locus',k,'1',sep = "_")
+			} else if (disp_b_locus_1 <= i && i <= disp_b_locus_last){
+				j = i-disp_a_locus_last
+				k = round((j/2)+0.0000001)
+				colnames(current_population)[i] <- paste('dispb_locus',k,'1',sep = "_")
+			} else if (env_locus_1 <= i && i <= env_locus_last) {
+				j = i-disp_b_locus_last
+				k = round((j/2)+0.0000001)
+				colnames(current_population)[i] <- paste('env_locus',k,'1',sep = "_")
+			} else if (neut_locus_1 <= i && i <= neut_locus_last) {
+				j = i-env_locus_last
+				k = round((j/2)+0.0000001)
+				colnames(current_population)[i] <- paste('neut_locus',k,'1',sep = "_")
+			}
+		} else if (i%%2 != 0){
+			if (4 <= i && i <= disp_a_locus_last){
+				j = i-meta_cols
+				k = round((j/2)+0.0000001)
+				colnames(current_population)[i] <- paste('dispa_locus',k,'2',sep = "_")
+			} else if (disp_b_locus_1 <= i && i <= disp_b_locus_last){
+				j = i-disp_a_locus_last
+				k = round((j/2)+0.0000001)
+				colnames(current_population)[i] <- paste('dispb_locus',k,'2',sep = "_")
+			} else if (env_locus_1 <= i && i <= env_locus_last) {
+				j = i-disp_b_locus_last
+				k = round((j/2)+0.0000001)
+				colnames(current_population)[i] <- paste('env_locus',k,'2',sep = "_")
+			} else if (neut_locus_1 <= i && i <= neut_locus_last) {
+				j = i-env_locus_last
+				k = round((j/2)+0.0000001)
+				colnames(current_population)[i] <- paste('neut_locus',k,'2',sep = "_")
+			}
+		}
+	} else if (meta_cols%%2 == 0) {
+		
+		if (i%%2 != 0) {
+			if (4 <= i && i <= disp_a_locus_last){
+				j = i-meta_cols
+				k = round((j/2)+0.0000001)
+				colnames(current_population)[i] <- paste('dispa_locus',k,'1',sep = "_")
+			} else if (disp_b_locus_1 <= i && i <= disp_b_locus_last){
+				j = i-disp_a_locus_last
+				k = round((j/2)+0.0000001)
+				colnames(current_population)[i] <- paste('dispb_locus',k,'1',sep = "_")
+			} else if (env_locus_1 <= i && i <= env_locus_last) {
+				j = i-disp_b_locus_last
+				k = round((j/2)+0.0000001)
+				colnames(current_population)[i] <- paste('env_locus',k,'1',sep = "_")
+			} else if (neut_locus_1 <= i && i <= neut_locus_last) {
+				j = i-env_locus_last
+				k = round((j/2)+0.0000001)
+				colnames(current_population)[i] <- paste('neut_locus',k,'1',sep = "_")
+			}
+		} else if (i%%2 == 0){
+			if (4 <= i && i <= disp_a_locus_last){
+				j = i-meta_cols
+				k = round((j/2)+0.0000001)
+				colnames(current_population)[i] <- paste('dispa_locus',k,'2',sep = "_")
+			} else if (disp_b_locus_1 <= i && i <= disp_b_locus_last){
+				j = i-disp_a_locus_last
+				k = round((j/2)+0.0000001)
+				colnames(current_population)[i] <- paste('dispb_locus',k,'2',sep = "_")
+			} else if (env_locus_1 <= i && i <= env_locus_last) {
+				j = i-disp_b_locus_last
+				k = round((j/2)+0.0000001)
+				colnames(current_population)[i] <- paste('env_locus',k,'2',sep = "_")
+			} else if (neut_locus_1 <= i && i <= neut_locus_last) {
+				j = i-env_locus_last
+				k = round((j/2)+0.0000001)
+				colnames(current_population)[i] <- paste('neut_locus',k,'2',sep = "_")
+			}	
+		}
+	}
+}
+
+# -------------------------------- (4) REPRODUCTIVE FUNCTIONS -------------------------------- 
+
+# Calculates the fitness phenotype for an individual
+
+zw <- function(individuals, start_locus, end_locus){
+	zfit <- sum(individual[start_locus:end_locus])
+	return(zfit)
+}
+
+
 # Calculates the expected fecundity of an individual
 
-R <- function(Rmax,k,zw){
+R <- function(Rmax, k, zw){
 	Ri <- Rmax*exp(-k*(zw^2))
 	return(Ri)
 }
@@ -68,14 +185,108 @@ R <- function(Rmax,k,zw){
 
 expoffspring <- function(Rmax,k,zw,Nix){
 	Ri <- R(Rmax,k,zw)
+	alpha <- (Rmax - 1)/nstar
 	EO <- Ri/(1+alpha*Nix)
 	return(EO)
 }
 
+# A function to choose the dads of the offspring. This function does not determine the number of offspring, but instead accepts that as a parameter. My 
+
+matefinder1D <- function(nbabies, mom, current_population, nbhd_width){
+	# construct a probability density function (multinomial) of mating with every dad (by distance) and then sample from that based on mom's density-independent fecundtiy
+	
+	momID <- mom$individual_ID
+	mom_loc <- mom$location
+	dads <- current_population[-momID,] # keep in mind that taking mom out will make the row number different from the individual ID number
+	dadIDs <- as.data.frame(dads$individual_ID)
+	dadIDs[,2] <- dads$location
+	dadIDs[,3] <- 0	
+	colnames(dadIDs) <- c('individual_ID','location','probability')
+	
+	# fills in the probability of mating with each dad given the distance away, the 
+	for (i in 1:nrow(dads)){
+		prob <- dnorm(dadIDs$location[i], mom_loc, nbhd_width)
+		dadIDs[i,3] <- prob
+	}
+	
+	# now we have a list of probabilities for each dad, which parameterizes a multinomial distribution. 
+	babies_vec <- rmultinom(1,size = nbabies, prob=dadIDs[,3])
+	
+	dadIDs[,4] <- babies_vec
+	colnames(dadIDs)[4] <- "offspring_counts"
+	
+	return(dadIDs)	
+}
+
+# A function to produce one child to a given mom. This is a helper function for reproduce ()
+	
+make_offspring <- function(mom, dad, current_population, generation, indiv_num){ # this whole function assumes that the first two columns of any indidividual have their generation number and their individual number. So locus 1 is in the third entry of the vector that defines every individual, and so on.
+	
+	# give the baby it's generation number and individual number
+	baby_vec_length = metadata + total_genome_length
+	baby <- matrix(0,nrow = 1, ncol = baby_vec_length)
+	baby[,1] <- generation
+	baby[,2] <- indiv_num
+	baby[,3] <- disperse1D(mom[,3],zda(mom),zdb(mom))
+	
+	# create the baby's genome
+	locus_vec <- seq(from = 3, to = total_genome_length+2, by = 2)
+	for (i in locus_vec){
+		if (i%%2 != 0){ # if this is an the first chromosome of a pair, inherit from mom at random
+			momallele = round(runif(1)) + i # choose either the allele at locus i_1 or at locus i_2
+			baby[,i] = mom[,momallele] 
+		}	else { # if this is an odd chromosome, inherit from dad at random
+				dadallele = round(runif(1))+i	# choose either the allele at locus i_1 or at locus i_2 from dad's genome
+				baby[,i+1] = dad[,dadallele]	
+			}
+	}
+	
+	# now mutate if needed
+	
+	if (runif < p_mut*total_genome_length){
+		focal_locus <- sample(c(4:total_genome_length+3),1) # sample a random locus
+		mut_allele <- rnorm(1, baby[focal_locus], sigma_mut)
+		baby[focal_locus] <- mut_allele
+	}
+	
+}
+
+# every individual contributes to the local density based on their distance only -- so here we assume that the fitness phenotype does NOT effect the density that individual contributes. In other words, the every individual's effective density contribution is the same, regardless of its phenotype. 
+# This also includes the focal individual in the calculations (this shouldn't matter as long as it's consistent wit nstar)
+localdensity <- function(mom,current_population){
+	
+	distances <- abs(current_population[,3]-mom[3])
+	local_density <- 0 
+	
+	for (i in 1:length(current_population)){
+		focal_indiv <- current_population[i,]
+		dix <- abs(mom$location - focal_indiv$location)
+		focal_indiv_contribution <- dnorm(dix,mom$location,nbhd_width)
+		local_density <- local_density + focal_indiv_contribution
+	}
+	return(local_density)
+}
+
+# Creates the actual number of offspring for a mother from its expected value (Poisson distributed around a mean of the expected)
+reproduce <- function(mom, nstar, Rmax, k, current_population){
+	# nstar is the population size that would be achieved if all individuals had Rmax fecundity. 
+	# Nix is the current local population density around mom
+	
+	nix <- localdensity(mom, current_population)
+	zwi <- zw(individuals,env_locus_1,total_loci)
+	expoffspring <- function(Rmax,k,zwi,nix)
+	num_offspring <- rpois(1,expoffspring)
+	
+	return(num_offspring)
+		
+}
+
+
+# -------------------------------- (5) DISPERSAL FUNCTIONS --------------------------------
 
 # Calculates the first dispersal phenotype (a- mean distance) for an individual.
 
-zda <- function(individual,start_locus,total_loci){
+zda <- function(individual, start_locus, end_locus){
 	# this assumes that you have one vector describing an individual. entries 13-22 describe the dispersal alleles
 	end_locus <- total_loci+start_locus-1
 	zdispa <- sum(individual[start_locus:end_locus])
@@ -83,7 +294,7 @@ zda <- function(individual,start_locus,total_loci){
 }
 
 
-zdb <- function(individual,start_locus,total_loci){
+zdb <- function(individual, start_locus, end_locus){
 	# this assumes that you have one vector describing an individual. entries 13-22 describe the dispersal alleles
 	end_locus <- total_loci+start_locus-1
 	zdisp <- sum(individual[start_locus:end_locus])
@@ -91,28 +302,12 @@ zdb <- function(individual,start_locus,total_loci){
 }
 
 
-# Calculates the fitness phenotype for an individual
-
-zw <- function(individuals,start_locus,total_loci){
-	end_locus <- total_loci+start_locus-1
-	zfit <- sum(individual[start_locus:end_locus])
-	return(zfit)
-}
-
-
-# A function to choose dad. This is a helper function for the offspring function
-
-
 disperse1D <- function(mom_loc, zda, zdb){
 	# assumes mom's location is in one dimension
-	
 	dist <- rinvgauss(1, zda, zdb)
 	dir <- sample(c(-1,1), 1)
-	
 	new_loc <- mom_loc + dir*dist
-	
-	return(new_loc)
-		
+	return(new_loc)	
 }
 
 
@@ -177,67 +372,20 @@ disperse2D <- function(mom_loc, zda, zdb){
 }
 
 
-matefinder1D < - function(mom, current_population, neighbourhood_dist){
-	# neighbourhood_dist should be a probability density function that describes the width of a neighbourhood
+# -------------------------------- (6) THE ENVIRONMENT -------------------------------- 
+
+# this function provides a map of what the Rmax is at any given point in space asa function of time
+# we use the value of t as the middle of the good environment. So at t=0, the good environment extends from [-env_length/2, env_length/2].
+
+environment <- function(dix, Rmax_good, Rmax_bad, t, env_length){
 	
-	# There are two ways I could write this function: (1) randomly choose a location using the normal distribution and then find the nearest individual to that point to mate with OR (2) find the probability of 	mating with every individual and then sample from that discrete distribution. I have a feeling the former will be faster? Especially if I could somehow search nearest that point for individuals. I should 	talk to Brett and Sam about this. 
+	low_lim <- t-(env_length/2)
+	upp_lim <- t+(env_length/2)
 	
-	mate_loc <- rnorm(1,mom[3],nbhd_width)
-	popsize <- nrow(current_population)
-	locations <- current_population[,3]
-	mate_dists <- locations - mate_loc
-	min_list <- which(mate_dists == min(mate_dists))
-	if (length(min_list) > 1){
-		rand_choice <- sample(min_list,1)
-		mate <- current_population[rand_choice,]
-	} else{
-		mate <- min_list[1]
+	if (low_lim < dix && upp_lim > dix){
+		return(Rmax_good)
+	} else {
+		return(Rmax_bad)
 	}
-	return(mate)	
 }
 
-
-# A function to produce one child to a given mom. This is a helper function for XXXXX
-	
-offspring <- function(mom, dad, current_population, generation, indiv_num){ # this whole function assumes that the first two columns of any indidividual have their generation number and their individual number. So locus 1 is in the third entry of the vector that defines every individual, and so on.
-	
-	# give the baby it's generation number and individual number
-	baby_vec_length = metadata + total_genome_length
-	baby <- matrix(0,nrow = 1, ncol = baby_vec_length)
-	baby[,1] <- generation
-	baby[,2] <- indiv_num
-	baby[,3] <- disperse1D(mom[,3],zda(mom),zdb(mom))
-	
-	# create the baby's genome
-	locus_vec <- seq(from = 3, to = total_genome_length+2, by = 2)
-	for (i in locus_vec){
-		if (i%%2 != 0){ # if this is an the first chromosome of a pair, inherit from mom at random
-			momallele = round(runif(1)) + i # choose either the allele at locus i_1 or at locus i_2
-			baby[,i] = mom[,momallele] 
-		}	else { # if this is an odd chromosome, inherit from dad at random
-				dadallele = round(runif(1))+i	# choose either the allele at locus i_1 or at locus i_2 from dad's genome
-				baby[,i+1] = dad[,dadallele]	
-			}
-	}
-	
-	# now mutate if needed
-	
-	
-	
-	
-}
-
-# Creates the drawn number of offspring for a given mother and packages them in a matrix
-
-reproduce <- function(mom, dad, nstar, Nix){
-	# nstar is the population size that would be achieved if all individuals had Rmax fecundity. 
-	# Nix is the current local population size
-	
-	
-	
-}
-# lasthenia californica will produce 1-3 inflorescences total, with 15-30 seeds per inflorescence. 
-
-# step 1 - find a mate (matefinder)
-# step 2 - reproduce (offspring - makes one offspring, reproduce - calculates the number of offspring and then gets offspring function to make them)
-# step 3 - 
