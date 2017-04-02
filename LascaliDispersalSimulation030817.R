@@ -28,14 +28,15 @@
 
    
 # -------------------------------- (2) CONSTANTS -------------------------------- 
+# This should be changed into a simple list of the constants and their definitions. The assignments of values to these constants should only be below. 
 
 meta_cols <- 3 # the number of metadata columns in the matrix (generation number, individual number, location)
-diploid <- 2
+ploidy <- 2
 disp_a_loci <- 5
 disp_b_loci <- 5
 env_loci <- 5
 neut_loci <- 5
-total_genome_length <- diploid*(disp_a_loci+disp_b_loci+env_loci+neut_loci)
+total_genome_length <- ploidy*(disp_a_loci+disp_b_loci+env_loci+neut_loci)
 max_gens <- 10000
 Rmax_good <- 50 # (50 seeds per inflorescence, 1 inflorescence MAX)
 Rmax_bad <- 0
@@ -58,109 +59,127 @@ env_length <- 10 # this should be varied so the gene flow (i.e. the neighbourhoo
    # Column 14-23: dispersal trait 2 (b = shape) loci 
    # Column 24-33: environmental loci
    # Column 34-43: neutral loci
+   
 
-current_population <- data.frame('generation' = 1, 'individual_ID' = 1:11, 'location' = seq(from = 0, to = 1, by = .1), 'rand' = seq(from = 0, to = 1, by = .1))
+# Makes the original data frame with the right numbers of columns and the right column labels -- use this to create an empty data frame to store the data from each generation
 
-meta_cols=ncol(current_population)
-disp_a_locus_1 <- meta_cols+1
-disp_a_locus_last <- disp_a_locus_1 + disp_a_loci*diploid - 1
-disp_b_locus_1 <- disp_a_locus_last + 1
-disp_b_locus_last <- disp_b_locus_1 + disp_b_loci*diploid - 1
-env_locus_1 <- disp_b_locus_last + 1
-env_locus_last <- env_locus_1 + env_loci*diploid - 1
-neut_locus_1 <- env_locus_last + 1
-neut_locus_last <- neut_locus_1 + neut_loci*diploid - 1
+make_popn_dataframe <- function(t,meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci){
+	current_population <- data.frame(x=0)
+	current_population[,1:meta_cols] <- c(0)
+	colnames(current_population) <- meta_col_names
 
-# creates all of the necessary new columns for the loci
-for (i in seq(from=meta_cols, to=total_genome_length+meta_cols,by=1)){
-	current_population[,i] <- 0
-}
+	disp_a_locus_1 <- meta_cols+1
+	disp_a_locus_last <- disp_a_locus_1 + disp_a_loci*ploidy - 1
+	disp_b_locus_1 <- disp_a_locus_last + 1
+	disp_b_locus_last <- disp_b_locus_1 + disp_b_loci*ploidy - 1
+	env_locus_1 <- disp_b_locus_last + 1
+	env_locus_last <- env_locus_1 + env_loci*ploidy - 1
+	neut_locus_1 <- env_locus_last + 1
+	neut_locus_last <- neut_locus_1 + neut_loci*ploidy - 1
 
-# Names the columns properly
+	# creates all of the necessary new columns for the loci
+	for (i in seq(from=meta_cols, to=total_genome_length+meta_cols,by=1)){
+		current_population[,i] <- 0
+	}
 
-for (i in meta_cols+1:ncol(current_population)){
-	# j = i-meta_cols
-	# k = round((j/2)+0.0000001) # round function in r round 0.5 to the even digit (i.e. 0. This is so weird.)
+	# Names the columns properly
+
+	for (i in meta_cols+1:ncol(current_population)){
 	
-	if (meta_cols%%2 != 0){
+		if (meta_cols%%2 != 0){
 	
-		if (i%%2 == 0) {
-			if (4 <= i && i <= disp_a_locus_last){
-				j = i-meta_cols
-				k = round((j/2)+0.0000001)
-				colnames(current_population)[i] <- paste('dispa_locus',k,'1',sep = "_")
-			} else if (disp_b_locus_1 <= i && i <= disp_b_locus_last){
-				j = i-disp_a_locus_last
-				k = round((j/2)+0.0000001)
-				colnames(current_population)[i] <- paste('dispb_locus',k,'1',sep = "_")
-			} else if (env_locus_1 <= i && i <= env_locus_last) {
-				j = i-disp_b_locus_last
-				k = round((j/2)+0.0000001)
-				colnames(current_population)[i] <- paste('env_locus',k,'1',sep = "_")
-			} else if (neut_locus_1 <= i && i <= neut_locus_last) {
-				j = i-env_locus_last
-				k = round((j/2)+0.0000001)
-				colnames(current_population)[i] <- paste('neut_locus',k,'1',sep = "_")
+			if (i%%2 == 0) {
+				if (4 <= i && i <= disp_a_locus_last){
+					j = i-meta_cols
+					k = round((j/2)+0.0000001)
+					colnames(current_population)[i] <- paste('dispa_locus',k,'1',sep = "_")
+				} else if (disp_b_locus_1 <= i && i <= disp_b_locus_last){
+					j = i-disp_a_locus_last
+					k = round((j/2)+0.0000001)
+					colnames(current_population)[i] <- paste('dispb_locus',k,'1',sep = "_")
+				} else if (env_locus_1 <= i && i <= env_locus_last) {
+					j = i-disp_b_locus_last
+					k = round((j/2)+0.0000001)
+					colnames(current_population)[i] <- paste('env_locus',k,'1',sep = "_")
+				} else if (neut_locus_1 <= i && i <= neut_locus_last) {
+					j = i-env_locus_last
+					k = round((j/2)+0.0000001)
+					colnames(current_population)[i] <- paste('neut_locus',k,'1',sep = "_")
+				}
+			} else if (i%%2 != 0){
+				if (4 <= i && i <= disp_a_locus_last){
+					j = i-meta_cols
+					k = round((j/2)+0.0000001)
+					colnames(current_population)[i] <- paste('dispa_locus',k,'2',sep = "_")
+				} else if (disp_b_locus_1 <= i && i <= disp_b_locus_last){
+					j = i-disp_a_locus_last
+					k = round((j/2)+0.0000001)
+					colnames(current_population)[i] <- paste('dispb_locus',k,'2',sep = "_")
+				} else if (env_locus_1 <= i && i <= env_locus_last) {
+					j = i-disp_b_locus_last
+					k = round((j/2)+0.0000001)
+					colnames(current_population)[i] <- paste('env_locus',k,'2',sep = "_")
+				} else if (neut_locus_1 <= i && i <= neut_locus_last) {
+					j = i-env_locus_last
+					k = round((j/2)+0.0000001)
+					colnames(current_population)[i] <- paste('neut_locus',k,'2',sep = "_")
+				}
 			}
-		} else if (i%%2 != 0){
-			if (4 <= i && i <= disp_a_locus_last){
-				j = i-meta_cols
-				k = round((j/2)+0.0000001)
-				colnames(current_population)[i] <- paste('dispa_locus',k,'2',sep = "_")
-			} else if (disp_b_locus_1 <= i && i <= disp_b_locus_last){
-				j = i-disp_a_locus_last
-				k = round((j/2)+0.0000001)
-				colnames(current_population)[i] <- paste('dispb_locus',k,'2',sep = "_")
-			} else if (env_locus_1 <= i && i <= env_locus_last) {
-				j = i-disp_b_locus_last
-				k = round((j/2)+0.0000001)
-				colnames(current_population)[i] <- paste('env_locus',k,'2',sep = "_")
-			} else if (neut_locus_1 <= i && i <= neut_locus_last) {
-				j = i-env_locus_last
-				k = round((j/2)+0.0000001)
-				colnames(current_population)[i] <- paste('neut_locus',k,'2',sep = "_")
-			}
-		}
-	} else if (meta_cols%%2 == 0) {
+		} else if (meta_cols%%2 == 0) {
 		
-		if (i%%2 != 0) {
-			if (4 <= i && i <= disp_a_locus_last){
-				j = i-meta_cols
-				k = round((j/2)+0.0000001)
-				colnames(current_population)[i] <- paste('dispa_locus',k,'1',sep = "_")
-			} else if (disp_b_locus_1 <= i && i <= disp_b_locus_last){
-				j = i-disp_a_locus_last
-				k = round((j/2)+0.0000001)
-				colnames(current_population)[i] <- paste('dispb_locus',k,'1',sep = "_")
-			} else if (env_locus_1 <= i && i <= env_locus_last) {
-				j = i-disp_b_locus_last
-				k = round((j/2)+0.0000001)
-				colnames(current_population)[i] <- paste('env_locus',k,'1',sep = "_")
-			} else if (neut_locus_1 <= i && i <= neut_locus_last) {
-				j = i-env_locus_last
-				k = round((j/2)+0.0000001)
-				colnames(current_population)[i] <- paste('neut_locus',k,'1',sep = "_")
-			}
-		} else if (i%%2 == 0){
-			if (4 <= i && i <= disp_a_locus_last){
-				j = i-meta_cols
-				k = round((j/2)+0.0000001)
-				colnames(current_population)[i] <- paste('dispa_locus',k,'2',sep = "_")
-			} else if (disp_b_locus_1 <= i && i <= disp_b_locus_last){
-				j = i-disp_a_locus_last
-				k = round((j/2)+0.0000001)
-				colnames(current_population)[i] <- paste('dispb_locus',k,'2',sep = "_")
-			} else if (env_locus_1 <= i && i <= env_locus_last) {
-				j = i-disp_b_locus_last
-				k = round((j/2)+0.0000001)
-				colnames(current_population)[i] <- paste('env_locus',k,'2',sep = "_")
-			} else if (neut_locus_1 <= i && i <= neut_locus_last) {
-				j = i-env_locus_last
-				k = round((j/2)+0.0000001)
+			if (i%%2 != 0) {
+				if (4 <= i && i <= disp_a_locus_last){
+					j = i-meta_cols
+					k = round((j/2)+0.0000001)
+					colnames(current_population)[i] <- paste('dispa_locus',k,'1',sep = "_")
+				} else if (disp_b_locus_1 <= i && i <= disp_b_locus_last){
+					j = i-disp_a_locus_last
+					k = round((j/2)+0.0000001)
+					colnames(current_population)[i] <- paste('dispb_locus',k,'1',sep = "_")
+				} else if (env_locus_1 <= i && i <= env_locus_last) {
+					j = i-disp_b_locus_last
+					k = round((j/2)+0.0000001)
+					colnames(current_population)[i] <- paste('env_locus',k,'1',sep = "_")
+				} else if (neut_locus_1 <= i && i <= neut_locus_last) {
+					j = i-env_locus_last
+					k = round((j/2)+0.0000001)
+					colnames(current_population)[i] <- paste('neut_locus',k,'1',sep = "_")
+				}
+			} else if (i%%2 == 0){
+				if (4 <= i && i <= disp_a_locus_last){
+					j = i-meta_cols
+					k = round((j/2)+0.0000001)
+					colnames(current_population)[i] <- paste('dispa_locus',k,'2',sep = "_")
+				} else if (disp_b_locus_1 <= i && i <= disp_b_locus_last){
+					j = i-disp_a_locus_last
+					k = round((j/2)+0.0000001)
+					colnames(current_population)[i] <- paste('dispb_locus',k,'2',sep = "_")
+				} else if (env_locus_1 <= i && i <= env_locus_last) {
+					j = i-disp_b_locus_last
+					k = round((j/2)+0.0000001)
+					colnames(current_population)[i] <- paste('env_locus',k,'2',sep = "_")
+				} else if (neut_locus_1 <= i && i <= neut_locus_last) {
+					j = i-env_locus_last
+					k = round((j/2)+0.0000001)
 				colnames(current_population)[i] <- paste('neut_locus',k,'2',sep = "_")
-			}	
+				}	
+			}
 		}
 	}
+	current_population <- current_population[-1,]
+	return(current_population)
+}
+
+
+# This uses the make_popn_dataframe function to create a data frame and then fill it with n identical individuals -- which is how the simulation starts. 
+# Possible modifications to make: non-identical individuals, individuals at different locations
+
+make_init_pop <- function(n, init_location, meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci){
+	curr_pop <- make_popn_dataframe(0, meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci)
+	for (i in 1:n){
+		curr_pop[i,] <- c(0,i,init_location,c(0,0,0,0,0,0,0,0,0,0),c(0,0,0,0,0,0,0,0,0,0),c(0,0,0,0,0,0,0,0,0,0),c(0,0,0,0,0,0,0,0,0,0))
+	}
+	return(curr_pop)
 }
 
 # -------------------------------- (4) REPRODUCTIVE FUNCTIONS -------------------------------- 
@@ -183,7 +202,7 @@ R <- function(Rmax, k, zw){
 
 # Calculates the expected number of offspring (as in Phillips 2015)
 
-expoffspring <- function(Rmax,k,zw,Nix){
+expoffspring <- function(zwi, nix, nstar, Rmax, k){
 	Ri <- R(Rmax,k,zw)
 	alpha <- (Rmax - 1)/nstar
 	EO <- Ri/(1+alpha*Nix)
@@ -218,9 +237,24 @@ matefinder1D <- function(nbabies, mom, current_population, nbhd_width){
 	return(dadIDs)	
 }
 
+convert_dads_list <- function(dadIDs){
+
+	dad_indices <- which(dadIDs$offspring_counts>0, arr.ind=TRUE)
+	IDs <- as.vector(dadIDs$individual_ID)[dad_indices]
+	offspring <- as.vector(dadIDs$offspring_counts)[dad_indices]
+	dads_by_offnum <- c()
+	
+	for (i in IDs){
+		tempvec <- matrix(data = IDs[i], nrow = 1, ncol = offspring[i])
+		dads_by_offnum <- c(dads_by_offnum, tempvec)
+	}
+	
+	return(dads_by_offnum)
+}
+
 # A function to produce one child to a given mom. This is a helper function for reproduce ()
 	
-make_offspring <- function(mom, dad, current_population, generation, indiv_num){ # this whole function assumes that the first two columns of any indidividual have their generation number and their individual number. So locus 1 is in the third entry of the vector that defines every individual, and so on.
+make_offspring <- function(mom, dad, generation, indiv_num){ # this whole function assumes that the first two columns of any indidividual have their generation number and their individual number. So locus 1 is in the third entry of the vector that defines every individual, and so on.
 	
 	# give the baby it's generation number and individual number
 	baby_vec_length = metadata + total_genome_length
@@ -253,6 +287,7 @@ make_offspring <- function(mom, dad, current_population, generation, indiv_num){
 
 # every individual contributes to the local density based on their distance only -- so here we assume that the fitness phenotype does NOT effect the density that individual contributes. In other words, the every individual's effective density contribution is the same, regardless of its phenotype. 
 # This also includes the focal individual in the calculations (this shouldn't matter as long as it's consistent wit nstar)
+
 localdensity <- function(mom,current_population){
 	
 	distances <- abs(current_population[,3]-mom[3])
@@ -274,8 +309,9 @@ reproduce <- function(mom, nstar, Rmax, k, current_population){
 	
 	nix <- localdensity(mom, current_population)
 	zwi <- zw(individuals,env_locus_1,total_loci)
-	expoffspring <- function(Rmax,k,zwi,nix)
-	num_offspring <- rpois(1,expoffspring)
+	exp_offspring <- expoffspring(zwi, nix, nstar, Rmax, k)
+	
+	num_offspring <- rpois(1, exp_offspring)
 	
 	return(num_offspring)
 		
@@ -388,4 +424,77 @@ environment <- function(dix, Rmax_good, Rmax_bad, t, env_length){
 		return(Rmax_bad)
 	}
 }
+
+# -------------------------------- (7) RUN SIMULATION LOOP --------------------------------
+
+# Constants: assigning values
+
+meta_cols <- 3 # the number of metadata columns in the matrix (generation number, individual number, location)
+meta_col_names <- c('generation','individual_ID','location')
+ploidy <- 2
+disp_a_loci <- 5
+disp_b_loci <- 5
+env_loci <- 5
+neut_loci <- 5
+total_genome_length <- ploidy*(disp_a_loci+disp_b_loci+env_loci+neut_loci)
+Rmax_good <- 50 # (50 seeds per inflorescence, 1 inflorescence MAX)
+Rmax_bad <- 0
+sigma <- 1 # effective size of spatial neighbourhood
+nstar <- 1000
+b <- 1 # shape parameter of the inverse gaussian distribution
+p_recomb <- 0.0001
+p_mut <- 0.00001 # probability of mutation at every allele
+sigma_mut <- 0.001 # standard deviation of the mutation kernel
+nbhd_width <- 1 # can set this equal to 1 without loss of generality as the whole environment can be large or small relative to this. 
+env_length <- 10 # this should be varied so the gene flow (i.e. the neighbourhood size to environment size varies) as this may have consequences for dipsersal evo
+t_max <- 10
+
+
+# Make the initial population (generation 0) - nstar identical individuals all at location 0
+
+current_population <- make_init_pop(nstar, init_location, meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci)
+
+for (t in 1:t_max){
+	# (1) Reproduction
+	# (2) Parental Death
+	# (3) Dispersal (but this is density independent)
+	# (3) F1 Reproduction
+	
+	
+	# (1) & (2) - offspring dispersal is built into the make_offspring function. 
+	
+	next_generation <- make_popn_dataframe(t,meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci)
+	next_gen_ID_tracker <- 1
+	
+	for (i in 1:nrow(current_population)){
+		mom <- current_population[i,]
+		Rmax <- environment(mom$location, Rmax_good, Rmax_bad, t, env_length)
+		mates <- current_population[-mom,]
+		n_offspring <- reproduce(mom, nstar, Rmax, k, mates)
+		dads_list <- matefinder1D(n_offspring, mom, mates, nbhd_width)
+		dads_list_reformat <- convert_dads_list(dads_list)
+		
+		for (n in 1:n_offspring){
+			dad <- dads_list_reformat[n]
+			new_babe <- make_offspring(mom, dad, current_population, t, indiv_num)
+			next_generation[next_gen_ID_tracker,] <- new_babe
+			next_gen_ID_tracker <- next_gen_ID_tracker + 1
+		}
+		
+	}
+	
+	# write the parental generation to file before erasing them (annuals)
+	write_name <- paste("lascali_sim_dispevo_only_gen_",t,".csv"sep="")
+	write.csv(current_population,write_name,col_names = TRUE, row_names = TRUE)
+	
+	current_population <- next_generation
+	
+}
+	
+
+
+
+
+
+
 
