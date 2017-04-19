@@ -39,7 +39,7 @@
 # total_genome_length: The total number of loci in the genome, but one diploid locus contributes 2. i.e. t_g_l <- ploidy*(disp_a_loci+disp_b_loci+env_loci+neut_loci)
 # Rmax_good: The intrinsic growth rate in the "good" habitat/environment 
 # Rmax_bad: The intrinsic growth rate in the "bad" habitat/environment
-# nstar: The maximum carrying capacity, or the total reproductive output of a neighbourhood
+# nstar: The interdensity an individual feels at which the expected number of 
 # p_mut: The probability of acquiring a mutation. We assume that only one mutation max is acquired per individual because the porbability of more than one is sufficiently sml
 # sigma_mut: The standard deviation of the mutation kernel - mutations are drawn from a normal distribution with mean p_mut and sd sigma_mut
 # nbhd_width: The "width" or "size" or "standard deviation" of the neighbourhood. The neighbourhood weight is a normal distribution with mean of the maternal location & sd nbhd_width
@@ -63,7 +63,7 @@ make_popn_dataframe <- function(t, meta_cols, meta_col_names, ploidy, disp_a_loc
 	current_population[,1:meta_cols] <- c(0)
 	colnames(current_population) <- meta_col_names
 
-# 	disp_a_locus_1 <- meta_cols+1
+ 	disp_a_locus_1 <- meta_cols+1
 	disp_a_locus_last <- disp_a_locus_1 + disp_a_loci*ploidy - 1
 	disp_b_locus_1 <- disp_a_locus_last + 1
 	disp_b_locus_last <- disp_b_locus_1 + disp_b_loci*ploidy - 1
@@ -166,10 +166,10 @@ make_popn_dataframe <- function(t, meta_cols, meta_col_names, ploidy, disp_a_loc
 }
 
 
-# This uses the make_popn_dataframe function to create a data frame and then fill it with n identical individuals -- which is how the simulation starts. 
-# Possible modifications to make: non-identical individuals, individuals at different locations
+# This uses the make_popn_dataframe function to create a data frame and then fill it with n individuals -- which is how the simulation starts. 
+# The initial location of the individuals is determined by making random draws fro the normal distribution whose sd is the same as the neighbourhood width. So in most cases, we should start with N individuals within the same neighbourhood. 
 
-make_pop <- function(t, n, init_location, nbhd_width, disp_a_allele, disp_b_allele, env_allele, meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci){
+make_pop <- function(t, N, init_location, nbhd_width, disp_a_allele, disp_b_allele, env_allele, meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci){
 	
 	curr_pop <- make_popn_dataframe(t, meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci)
 	
@@ -179,7 +179,7 @@ make_pop <- function(t, n, init_location, nbhd_width, disp_a_allele, disp_b_alle
 	neut_genome <- as.vector(matrix(0, nrow = 1, ncol = ploidy*neut_loci))
 	
 		
-	for (i in 1:n){
+	for (i in 1:N){
 		init_loc_rand <- rnorm(1, mean = init_location, sd = nbhd_width) # the initial location is random but all individuals will fall within the same neighbourhood (i.e. the standard deviation is the same as the neighbourhood width)
 
 		curr_pop[i,] <- c(0, i, init_loc_rand, disp_a_genome, disp_b_genome, env_genome, neut_genome)
@@ -197,7 +197,6 @@ zw <- function(individual, start_locus, end_locus){
 	return(zfit)
 }
 
-
 # Calculates the expected fecundity of an individual
 
 R <- function(Rmax, k, zw){
@@ -205,8 +204,7 @@ R <- function(Rmax, k, zw){
 	return(Ri)
 }
 
-
-# Calculates the expected number of offspring (as in Phillips 2015)
+# Calculates the expected number of offspring (similar to Phillips 2015 - need to valiadte the reasoning behind this)
 
 expoffspring <- function(zwi, nix, nstar, Rmax, k){
 	Ri <- R(Rmax,k,zwi)
@@ -248,11 +246,13 @@ convert_dads_list <- function(dadIDs){
 	dad_indices <- which(dadIDs$offspring_counts>0, arr.ind=TRUE)[,1]
 	IDs <- as.vector(dadIDs$individual_ID)[dad_indices]
 	offspring <- as.vector(dadIDs$offspring_counts)[dad_indices]
-	dads_by_offnum <- c()
+	dads_by_offnum <- vector()
 	
 	for (i in 1:length(IDs)){
-		tempvec <- matrix(data = IDs[i], nrow = 1, ncol = offspring[i])
-		dads_by_offnum <- c(dads_by_offnum, tempvec)
+		if (length(offspring) > 0){
+			tempvec <- matrix(data = IDs[i], nrow = 1, ncol = offspring[i])
+			dads_by_offnum <- c(dads_by_offnum, tempvec)
+		}
 	}
 	
 	return(dads_by_offnum)
@@ -302,13 +302,15 @@ localdensity <- function(mom, current_population){
 	for (i in 1:nrow(current_population)){
 		focal_indiv <- current_population[i,]
 		dix <- abs(mom$location - focal_indiv$location)
-		focal_indiv_contribution <- dnorm(dix,mom$location,nbhd_width)
+		focal_indiv_contribution <- dnorm(dix, 0, nbhd_width)
 		local_density <- local_density + focal_indiv_contribution
 	}
+	
 	return(local_density)
 }
 
 # Creates the actual number of offspring for a mother from its expected value (Poisson distributed around a mean of the expected)
+
 reproduce <- function(mom, nstar, Rmax, k, current_population){
 	# nstar is the population size that would be achieved if all individuals had Rmax fecundity. 
 	# Nix is the current local population density around mom
@@ -426,77 +428,5 @@ environment <- function(dix, Rmax_good, Rmax_bad, t, env_length){
 		return(Rmax_bad)
 	}
 }
-
-# -------------------------------- (7) RUN SIMULATION LOOP --------------------------------
-
-# Constants: assigning values
-
-meta_cols <- 3 # the number of metadata columns in the matrix (generation number, individual number, location)
-meta_col_names <- c('generation','individual_ID','location')
-ploidy <- 2
-disp_a_loci <- 5
-disp_b_loci <- 5
-env_loci <- 5
-neut_loci <- 5
-total_genome_length <- ploidy*(disp_a_loci+disp_b_loci+env_loci+neut_loci)
-Rmax_good <- 50 # (50 seeds per inflorescence, 1 inflorescence MAX)
-Rmax_bad <- 0
-sigma <- 1 # effective size of spatial neighbourhood
-nstar <- 1000
-b <- 1 # shape parameter of the inverse gaussian distribution
-p_recomb <- 0.0001
-p_mut <- 0.00001 # probability of mutation at every allele
-sigma_mut <- 0.001 # standard deviation of the mutation kernel
-nbhd_width <- 1 # can set this equal to 1 without loss of generality as the whole environment can be large or small relative to this. 
-env_length <- 10 # this should be varied so the gene flow (i.e. the neighbourhood size to environment size varies) as this may have consequences for dipsersal evo
-t_max <- 10
-
-
-# Make the initial population (generation 0) - nstar identical individuals all at location 0
-
-current_population <- make_init_pop(nstar, init_location, meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci)
-
-for (t in 1:t_max){
-	# (1) Reproduction
-	# (2) Parental Death
-	# (3) Dispersal (but this is density independent)
-	# (3) F1 Reproduction
-	
-	
-	# (1) & (2) - offspring dispersal is built into the make_offspring function. 
-	
-	next_generation <- make_popn_dataframe(t,meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci)
-	next_gen_ID_tracker <- 1
-	
-	for (i in 1:nrow(current_population)){
-		mom <- current_population[i,]
-		Rmax <- environment(mom$location, Rmax_good, Rmax_bad, t, env_length)
-		mates <- current_population[-mom,]
-		n_offspring <- reproduce(mom, nstar, Rmax, k, mates)
-		dads_list <- matefinder1D(n_offspring, mom, mates, nbhd_width)
-		dads_list_reformat <- convert_dads_list(dads_list)
-		
-		for (n in 1:n_offspring){
-			dad <- dads_list_reformat[n]
-			new_babe <- make_offspring(mom, dad, current_population, t, indiv_num)
-			next_generation[next_gen_ID_tracker,] <- new_babe
-			next_gen_ID_tracker <- next_gen_ID_tracker + 1
-		}
-		
-	}
-	
-	# write the parental generation to file before erasing them (annuals)
-	write_name <- paste("/Users/Courtney/Documents/Simulation Practice Files/lascali_sim_dispevo_only_gen_",t,".csv"sep="")
-	write.csv(current_population,write_name,col_names = TRUE, row_names = TRUE)
-	
-	current_population <- next_generation
-	
-}
-	
-
-
-
-
-
 
 
