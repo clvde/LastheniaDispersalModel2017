@@ -1,7 +1,7 @@
-# Beginning of Dispersal Simulations
+# Dispersal Evolution Simulations
 # Author: Courtney Van Den Elzen
 # Rotation 3 Project: Melbourne and Flaxman Labs
-# February 2017 - May 2017
+# February 2017 - June 2017
 
 # The goal of this project is to set up a simulation modelling framework which can be used to describe the population dynamics and spread of annual, wind-dispersed grassland plants
 

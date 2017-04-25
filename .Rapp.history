@@ -1810,7 +1810,6 @@ df_shell <- make_popn_dataframe(t, 3, meta_col_names, ploidy, disp_a_loci, disp_
 df_shell
 curr_pop_eg <- make_pop(0, nstar+1000, init_loc_mean, nbhd_width, disp_a_allele, disp_b_allele, env_allele, meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci)
 curr_pop_eg
-curr_pop_eg
 mom_eg <- curr_pop_eg[1,]
 mom_eg
 curr_pop_eg <- curr_pop_eg[-1,]
@@ -1897,7 +1896,6 @@ nbabies <- reproduce(mom_eg, nstar, Rmax, k, curr_pop_eg)
 nbabies
 dadIDs <- matefinder1D(nbabies, mom_eg, curr_pop_eg, nbhd_width)
 dadIDs
-dadIDs_conv <- convert_dads_list(dadIDs)
 dadIDs_conv <- convert_dads_list(dadIDs)
 dadIDs_conv
 zdai <- zda(mom_eg, disp_a_locus_1, disp_a_locus_last)
@@ -2060,7 +2058,6 @@ offspring <- make_offspring(mom, dad, current_population, t, indiv_num)
 next_generation[next_gen_ID_tracker,] <- offspring
 next_gen_ID_tracker <- next_gen_ID_tracker + 1
 }
-}
 for (i in 1:nrow(current_population)){#
 		mom <- current_population[i,]#
 		Rmax <- environment(mom$location, Rmax_good, Rmax_bad, t, env_length)#
@@ -2191,3 +2188,6 @@ for (t in 1:t_max){#
 	current_population <- next_generation#
 #
 }
+filepathspec = "/Users/Courtney/Documents/Rotation 3 - Melbourne & Flaxman Labs/Simulation Practice Files"
+file = paste(filepathspec,"/parameters_from_sim.txt", sep = '')
+file
