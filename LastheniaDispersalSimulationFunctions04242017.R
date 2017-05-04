@@ -70,9 +70,11 @@
 
 make_popn_dataframe <- function(t, nrows, meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci){
 	#empty dataframe
-	current_population <- data.frame(x=0)
+	current_population <- as.data.frame( matrix(data = 0, nrow = nrows, ncol = (meta_cols + total_genome_length)) ) # SMF comment: initially dims were 1 x 1
+	# SMF comment: if the data in this object are always going to be zeros, why not just keep it as a matrix? 
+	# SMF comment: A matrix has fewer options and properties, so it may not work elsewhere, but just something to think about
 	# create the metadata columns
-	current_population[,1:meta_cols] <- c(0)
+	current_population[,1:meta_cols] <- c(0) # SMF comment: was growing dynamically in columns (and only had one row still)
 	# give them the right names
 	colnames(current_population) <- meta_col_names
 	
@@ -86,12 +88,19 @@ make_popn_dataframe <- function(t, nrows, meta_cols, meta_col_names, ploidy, dis
 	neut_locus_1 <- env_locus_last + 1
 	neut_locus_last <- neut_locus_1 + neut_loci*ploidy - 1
 
+<<<<<<< HEAD
 	# create all of the necessary new columns for the loci (after metadata columns)
 	for (i in seq(from=meta_cols, to=(total_genome_length+meta_cols), by=1)){
 		current_population[,i] <- 0
 	}
 	
 	
+=======
+	# # create all of the necessary new columns for the loci (after metadata columns) # SMF comment: no longer needed
+	# for (i in seq(from=meta_cols, to=(total_genome_length+meta_cols), by=1)){ # SMF comment: grows columns again dynamically; still 1 row
+	# 	current_population[,i] <- 0
+	# }
+>>>>>>> origin/master
 
 	# Names the columns properly - accounts for changes in number of loci or ploidy of loci controlling traits, as well as differences in number of metadata columns. 
 	for (i in (meta_cols+1):ncol(current_population)){
@@ -117,7 +126,7 @@ make_popn_dataframe <- function(t, nrows, meta_cols, meta_col_names, ploidy, dis
 					k = round((j/2)+0.0000001)
 					colnames(current_population)[i] <- paste('neut_locus',k,'1',sep = "_")
 				}
-			} else if (i%%2 != 0){
+			} else { # SMF comment: changed to else
 				if (4 <= i && i <= disp_a_locus_last){
 					j = i-meta_cols
 					k = round((j/2)+0.0000001)
@@ -136,7 +145,7 @@ make_popn_dataframe <- function(t, nrows, meta_cols, meta_col_names, ploidy, dis
 					colnames(current_population)[i] <- paste('neut_locus',k,'2',sep = "_")
 				}
 			}
-		} else if (meta_cols%%2 == 0) {
+		} else {
 		
 			if (i%%2 != 0) {
 				if (4 <= i && i <= disp_a_locus_last){
@@ -156,7 +165,7 @@ make_popn_dataframe <- function(t, nrows, meta_cols, meta_col_names, ploidy, dis
 					k = round((j/2)+0.0000001)
 					colnames(current_population)[i] <- paste('neut_locus',k,'1',sep = "_")
 				}
-			} else if (i%%2 == 0){
+			} else {
 				if (4 <= i && i <= disp_a_locus_last){
 					j = i-meta_cols
 					k = round((j/2)+0.0000001)
@@ -179,7 +188,7 @@ make_popn_dataframe <- function(t, nrows, meta_cols, meta_col_names, ploidy, dis
 	}
 	
 	# add all rows specified above. All entries are zero until changed.
-	current_population[c(1:nrows),] <- 0
+	# current_population[c(1:nrows),] <- 0 # SMF comment: no longer necessary; dynamically grew rows
 	return(current_population)
 }
 
@@ -194,10 +203,11 @@ make_pop <- function(t, N, init_location, nbhd_width, disp_a_allele, disp_b_alle
 	curr_pop <- make_popn_dataframe(t, 0, meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci)
 	
 	# fills in the columns with the initial values of the three traits (disp_a, disp_b, and env). Could make random draws from a distribution to seed init pop with genetic variation. 
-	disp_a_genome <- as.vector(matrix(disp_a_allele/(ploidy*disp_a_loci), nrow = 1, ncol = ploidy*disp_a_loci))
-	disp_b_genome <- as.vector(matrix(disp_b_allele/(ploidy*disp_b_loci), nrow = 1, ncol = ploidy*disp_b_loci))
-	env_genome <- as.vector(matrix(env_allele/(ploidy*env_loci), nrow = 1, ncol = ploidy*env_loci))
-	neut_genome <- as.vector(matrix(0, nrow = 1, ncol = ploidy*neut_loci))
+	# SMF comment: eliminated unnecessary coercion steps
+	disp_a_genome <- rep(disp_a_allele/(ploidy*disp_a_loci), ploidy*disp_a_loci)
+	disp_b_genome <- rep(disp_b_allele/(ploidy*disp_b_loci), ploidy*disp_b_loci)
+	env_genome <- rep(env_allele/(ploidy*env_loci), ncol = ploidy*env_loci)
+	neut_genome <- rep(0, ploidy*neut_loci)
 	
 	# choose random initial location for every individual in the population, and then create the inidividual. The first zero denotes ???? COME BACK TO THIS
 	for (i in 1:N){
@@ -240,24 +250,32 @@ matefinder1D <- function(nbabies, mom, current_population, nbhd_width){
 	mom_loc <- mom$location
 	
 	# Then take mom out of the population (self-incompatibility). This makes the row number different from the individual ID number
-	dads <- current_population[-momID,] 
-	
+	# dads <- current_population[-momID,] # SMF comment: this makes a large new data frame
+ 	
 	# make a data frame of all possible dads with their locations. The third column will hold the probability they father childten with the given mother (determined by distance)
-	dadIDs <- as.data.frame(dads$individual_ID)
-	dadIDs[,2] <- dads$location
-	dadIDs[,3] <- 0	
-	colnames(dadIDs) <- c('individual_ID','location','probability')
+  # SMF comment: the following 3 lines of code, now commented out, were growing the dadIDs object dynamically
+	# dadIDs <- as.data.frame(dads$individual_ID)
+	# dadIDs[,2] <- dads$location
+	# dadIDs[,3] <- 0	
+	myZeroVec <- rep(0, (length(current_population$location)-1))
+	# SMF comment: the "-1" in the previous line is for taking out the momID
+	dadIDs <- as.data.frame(cbind(current_population$individual_ID[-momID], current_population$location[-momID], myZeroVec, myZeroVec))
+	colnames(dadIDs) <- c('individual_ID','location','probability','offspring_counts')
 	
 	# fills in the probability of mating with each dad given the distance away
-	for (i in 1:nrow(dads)){
-		prob <- dnorm(dadIDs$location[i], mom_loc, nbhd_width)
-		dadIDs[i,3] <- prob
-	}
+	# SMF comment: commented out the following loop because it could be vectorized
+	# for (i in 1:nrow(dadIDs)){
+	# 	prob <- dnorm(dadIDs$location[i], mom_loc, nbhd_width)
+	# 	dadIDs[i,3] <- prob
+	# }
+	dadIDs[,3] <- dnorm(dadIDs$location, mom_loc, nbhd_width) # SMF comment: this is the vectorized step
+	
 	
 	# now have a list of probabilities for each dad, which parameterizes a multinomial distribution. Draw from it to determine the number of children each fathers with the given mom
-	babies_vec <- rmultinom(1,size = nbabies, prob=dadIDs[,3])
-	dadIDs[,4] <- babies_vec
-	colnames(dadIDs)[4] <- "offspring_counts"
+	# SMF comment: the following two lines were combined into one
+	# babies_vec <- rmultinom(1,size = nbabies, prob=dadIDs[,3])
+	# dadIDs[,4] <- babies_vec # SMF comment: this was previously a dynamic growth step
+	dadIDs[,4] <- rmultinom(1,size = nbabies, prob=dadIDs[,3])
 	
 	return(dadIDs)	
 }
