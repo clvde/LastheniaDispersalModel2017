@@ -44,6 +44,13 @@
 # sigma_mut: The standard deviation of the mutation kernel - mutations are drawn from a normal distribution with mean p_mut and sd sigma_mut
 # nbhd_width: The "width" or "size" or "standard deviation" of the neighbourhood. The neighbourhood weight is a normal distribution with mean of the maternal location & sd nbhd_width
 # env_length: The length of the "good" habitat location. This should be varied (i.e. the neighbourhood size to environment size varies) as this may have consequences for dipsersal evo
+# t_max: the max number of generations to run the simulation for
+# env_change_speed: The shift in the location of the good habitat every time step
+# init_loc_mean: Mean of the initial location distribution which initial population locations are drawn from 
+# k: From Phillips 2015 - controls the drop in fitness as zw deviates from zero (optimal)
+# disp_a_allele: The initial allelic value for the disp_a trait
+# disp_b_allele: The initial allelic value for the disp_b trait
+# env_allele: The initial allelic value for the environmental trait
 
 # -------------------------------- (3) POPULATION DATA FRAME CREATION -------------------------------- 
 
@@ -60,6 +67,7 @@
 # t: the generation
 # nrows: the number of entries budgetted for the new generation (there is no condition for if the new gen exceeds this number -- should further modify)
 # all other input variables as above
+
 make_popn_dataframe <- function(t, nrows, meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci){
 	#empty dataframe
 	current_population <- data.frame(x=0)
@@ -82,6 +90,8 @@ make_popn_dataframe <- function(t, nrows, meta_cols, meta_col_names, ploidy, dis
 	for (i in seq(from=meta_cols, to=(total_genome_length+meta_cols), by=1)){
 		current_population[,i] <- 0
 	}
+	
+	
 
 	# Names the columns properly - accounts for changes in number of loci or ploidy of loci controlling traits, as well as differences in number of metadata columns. 
 	for (i in (meta_cols+1):ncol(current_population)){
@@ -427,6 +437,7 @@ disperse1D <- function(mom_loc, zda, zdb){
 
 # this function provides a map of what the Rmax is at any given point in space asa function of time
 # we use the value of t as the middle of the good environment. So at t=0, the good environment extends from [-env_length/2, env_length/2].
+
 environment <- function(dix, Rmax_good, Rmax_bad, t, env_length, env_change_speed){
 	
 	low_lim <- env_change_speed*t-(env_length/2)
