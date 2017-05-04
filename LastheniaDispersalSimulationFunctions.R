@@ -88,19 +88,15 @@ make_popn_dataframe <- function(t, nrows, meta_cols, meta_col_names, ploidy, dis
 	neut_locus_1 <- env_locus_last + 1
 	neut_locus_last <- neut_locus_1 + neut_loci*ploidy - 1
 
-<<<<<<< HEAD
 	# create all of the necessary new columns for the loci (after metadata columns)
 	for (i in seq(from=meta_cols, to=(total_genome_length+meta_cols), by=1)){
 		current_population[,i] <- 0
 	}
-	
-	
-=======
+
 	# # create all of the necessary new columns for the loci (after metadata columns) # SMF comment: no longer needed
 	# for (i in seq(from=meta_cols, to=(total_genome_length+meta_cols), by=1)){ # SMF comment: grows columns again dynamically; still 1 row
 	# 	current_population[,i] <- 0
 	# }
->>>>>>> origin/master
 
 	# Names the columns properly - accounts for changes in number of loci or ploidy of loci controlling traits, as well as differences in number of metadata columns. 
 	for (i in (meta_cols+1):ncol(current_population)){
@@ -197,23 +193,29 @@ make_popn_dataframe <- function(t, nrows, meta_cols, meta_col_names, ploidy, dis
 # Initial location of individuals is determined by random draws from norm(init_location, nbhd_width). 
 # N: number of inidividuals
 # all other input variables as above
+
 make_pop <- function(t, N, init_location, nbhd_width, disp_a_allele, disp_b_allele, env_allele, meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci){
 	
 	# make an initial empty data frame (this has one row by default, which is overwritten in the for loop below)
-	curr_pop <- make_popn_dataframe(t, 0, meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci)
-	
+	curr_pop <- make_popn_dataframe(t, 1, meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci)
+
 	# fills in the columns with the initial values of the three traits (disp_a, disp_b, and env). Could make random draws from a distribution to seed init pop with genetic variation. 
 	# SMF comment: eliminated unnecessary coercion steps
+	
 	disp_a_genome <- rep(disp_a_allele/(ploidy*disp_a_loci), ploidy*disp_a_loci)
 	disp_b_genome <- rep(disp_b_allele/(ploidy*disp_b_loci), ploidy*disp_b_loci)
-	env_genome <- rep(env_allele/(ploidy*env_loci), ncol = ploidy*env_loci)
+	env_genome <- rep(env_allele/(ploidy*env_loci), ploidy*env_loci)
 	neut_genome <- rep(0, ploidy*neut_loci)
 	
+	curr_pop[1:N,] <- 0
 	# choose random initial location for every individual in the population, and then create the inidividual. The first zero denotes ???? COME BACK TO THIS
-	for (i in 1:N){
-		init_loc_rand <- rnorm(1, mean = init_location, sd = nbhd_width)
-		curr_pop[i,] <- c(0, i, init_loc_rand, disp_a_genome, disp_b_genome, env_genome, neut_genome)
-	}
+	curr_pop[,1] <- t
+	curr_pop[,2] <- c(1:N)
+	curr_pop[,3] <- rnorm(N, mean = init_location, sd = nbhd_width)
+	curr_pop[,4:13] <- disp_a_genome
+	curr_pop[,14:23] <- disp_b_genome
+	curr_pop[,24:33] <- env_genome
+	curr_pop[,34:43] <- neut_genome
 	
 	return(curr_pop)
 }
@@ -242,7 +244,7 @@ expoffspring <- function(zwi, nix, nstar, Rmax, k){
 }
 
 # Choose pollen donors of offspring. This function does not determine the number of offspring, but instead accepts that as a parameter. 
-matefinder1D <- function(nbabies, mom, current_population, nbhd_width){
+matefinder1D_SMF <- function(nbabies, mom, current_population, nbhd_width){
 	# construct a probability density function (multinomial) of mating with every dad (by distance) and then sample from that based on mom's density-independent fecundtiy
 	
 	# Get mom's identity and location
@@ -270,7 +272,6 @@ matefinder1D <- function(nbabies, mom, current_population, nbhd_width){
 	# }
 	dadIDs[,3] <- dnorm(dadIDs$location, mom_loc, nbhd_width) # SMF comment: this is the vectorized step
 	
-	
 	# now have a list of probabilities for each dad, which parameterizes a multinomial distribution. Draw from it to determine the number of children each fathers with the given mom
 	# SMF comment: the following two lines were combined into one
 	# babies_vec <- rmultinom(1,size = nbabies, prob=dadIDs[,3])
@@ -281,6 +282,27 @@ matefinder1D <- function(nbabies, mom, current_population, nbhd_width){
 }
 
 
+matefinder1D_BAM <- function(nbabies, mom, current_population, nbhd_width){
+	# construct a probability density function (multinomial) of mating with every dad (by distance) and then sample from that based on mom's density-independent fecundtiy
+	
+	# Get mom's identity and location
+	momID <- mom$individual_ID
+	mom_loc <- mom$location
+	
+	# Then take mom out of the population (self-incompatibility). This makes the row number different from the individual ID number
+	dads <- current_population[-momID,] 
+	
+	# make a data frame of all possible dads with their locations. The third column will hold the probability they father childten with the given mother (determined by distance)
+
+	##BAM I revised your code with the following suggestion (from here to the end), including vectorizing the for loop
+	# Probability of mating with each dad given the distance away
+	probability <- dnorm(dads$location, mom_loc, nbhd_width)
+	# Now have a list of probabilities for each dad, which parameterizes a multinomial distribution. Draw from it to determine the number of children each fathers with the given mom
+	offspring_counts <- rmultinom(1, size=nbabies, prob=probability)
+	
+	return( data.frame(individual_ID=dads$individual_ID, location=dads$location, probability=probability, offspring_counts=offspring_counts) )	
+}
+
 # this converts the list of dads and their offspring to a format easily fed into the reproduce() function.
 convert_dads_list <- function(dadIDs){
 
@@ -289,6 +311,7 @@ convert_dads_list <- function(dadIDs){
 	offspring <- as.vector(dadIDs$offspring_counts)[dad_indices]
 	dads_by_offnum <- vector()
 	
+	##BAM Should definitely vectorize this, or at least set the vector size at the start - currently growing a row at a time, which is very slow
 	for (i in 1:length(IDs)){
 		if (length(offspring) > 0){
 			tempvec <- matrix(data = IDs[i], nrow = 1, ncol = offspring[i])
@@ -340,6 +363,23 @@ localdensity <- function(mom, current_population){
 	distances <- abs(current_population[,3]-mom[3])
 	local_density <- 0 
 	
+	for (i in 1:nrow(current_population)){
+		focal_indiv <- current_population[i,]
+		dix <- abs(mom$location - focal_indiv$location)
+		focal_indiv_contribution <- dnorm(dix, 0, nbhd_width)
+		local_density <- local_density + focal_indiv_contribution
+	}
+	
+	return(local_density)
+}
+
+localdensity_BAM <- function(mom, current_population){
+	
+	local_density <- 0 
+
+	##BAM Can be vectorized. Looks like you made a start above
+	##BAM would be something like
+	##BAM local_density <- sum(dnorm(distances, 0, nbhd_width))
 	for (i in 1:nrow(current_population)){
 		focal_indiv <- current_population[i,]
 		dix <- abs(mom$location - focal_indiv$location)

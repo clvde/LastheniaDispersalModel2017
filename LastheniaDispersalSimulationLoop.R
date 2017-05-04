@@ -48,6 +48,7 @@ write(parameters, file = paste(filepathspec,"/parameters_from_sim.txt", sep = ''
 # Simulation
 
 # Create generation 0
+
 current_population <- make_pop(0, nstar, init_loc_mean, nbhd_width, disp_a_allele, disp_b_allele, env_allele, meta_cols, meta_col_names, ploidy, disp_a_loci, disp_b_loci, env_loci, neut_loci)
 
 # Write it to file
@@ -76,7 +77,7 @@ for (t in 1:t_max){
 		if (n_offspring > 0) {
 			for (n in 1:n_offspring){
 				dad <- dads_list_reformat[n]
-				offspring <- make_offspring(mom, dad, t, next_gen_ID_tracker,meta_cols)
+				offspring <- make_offspring(mom, dad, t, next_gen_ID_tracker,meta_cols,p_mut)
 				next_generation[next_gen_ID_tracker,] <- offspring
 				next_gen_ID_tracker <- next_gen_ID_tracker + 1
 			}
