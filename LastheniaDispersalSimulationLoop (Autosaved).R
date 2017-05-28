@@ -79,7 +79,7 @@ for (t in 1:t_max){
 		if (n_offspring > 0) {
 			for (n in 1:n_offspring){
 				dad <- dads_list_reformat[n]
-				offspring <- make_offspring(mom, dad, t, next_gen_ID_tracker,meta_cols,p_mut)
+				offspring <- make_offspring(mom, dad, t, next_gen_ID_tracker, p_mut)
 				next_generation[next_gen_ID_tracker,] <- offspring
 				next_gen_ID_tracker <- next_gen_ID_tracker + 1
 			}
