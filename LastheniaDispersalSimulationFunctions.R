@@ -242,8 +242,11 @@ reproduce <- function(mom, nstar, Rmax, zmax, k, current_population){
 	# nix is the current local population density around mom
 	
 	nix <- localdensity(mom, current_population)
-	zwi <- as.numeric(zw(current_population, env_locus_1, env_locus_last))
+
+	zwi <- as.numeric(zw(mom, env_locus_1, env_locus_last))
+
 	exp_offspring <- expoffspring(zwi, nix, nstar, Rmax, zmax, k)
+
 	num_offspring <- rpois(1, exp_offspring)
 	
 	return(num_offspring)	
@@ -255,40 +258,33 @@ matefinder1D <- function(nbabies, mom, current_population, nbhd_width){
 	mom_loc <- mom$location
 
 	myZeroVec <- rep(0, (length(current_population$location)-1)) # SMF comment: the "-1" in the previous line is for taking out the momID
+	
 	dadIDs <- as.data.frame(cbind(current_population$individual_ID[-momID], current_population$location[-momID], myZeroVec, myZeroVec))
+	
 	colnames(dadIDs) <- c('individual_ID','location','probability','offspring_counts')
 	
 	# fills in the probability of mating with each dad given the distance away
-	dadIDs[,3] <- dnorm(dadIDs$location, mom_loc, nbhd_width) # SMF comment: this is the vectorized step
+	dadIDs$probability <- dnorm(dadIDs$location, mom_loc, nbhd_width) # SMF comment: this is the vectorized step
 	
 	# list of probs for each dad. Parameterizes a multinomial distribution. Draw from it to get number children each fathers with the given mom
-	dadIDs[,4] <- rmultinom(1,size = nbabies, prob=dadIDs[,3])
+	dadIDs$offspring_counts <- rmultinom(1,size = nbabies, prob=dadIDs$probability)
 	
 	return(dadIDs)	
 }
-
 
 # this converts the list of dads and their offspring to a format easily fed into the reproduce() function.
 convert_dads_list <- function(dadIDs){
 
 	# find the rows in dadIDs where the number of offspring (i.e. column 4) is >0
 	dad_indices <- which(dadIDs$offspring_counts>0, arr.ind=TRUE)[,1] 
-	print("dad_indices: ")
-	print(dad_indices)
 	
 	# find the individual IDs at those rows
 	IDs <- as.vector(dadIDs$individual_ID)[dad_indices]
-	print("IDs: ")
-	print(IDs)
 	
 	# find the number of offspring (i.e. the value in column 4) for each dad
 	offspring <- as.vector(dadIDs$offspring_counts)[dad_indices]
-	print("offspring: ")
-	print(offspring)
 	
 	tot_n_off <- sum(offspring)
-	print("tot_n_off: ")
-	print(tot_n_off)
 	
 	dads_by_offnum <- vector(length=tot_n_off)
 	
@@ -308,7 +304,39 @@ convert_dads_list <- function(dadIDs){
 # Assumes that the first two columns of any indidividual have their generation number and their individual number, and col 3 had the locations. So locus 1 is in the fourth entry of the vector that defines every individual, and so on.
 # This function cannot yet handle adding new metadata columns!! NEED TO CHANGE THIS STILL
 
+
 make_offspring <- function(mom, dad, generation, indiv_num, p_mut){ 
+
+	# give the baby it's generation number and individual number
+	baby_vec_length = 3 + total_genome_length
+	baby <- matrix(0,nrow = 1, ncol = baby_vec_length)
+	baby[,1:3] <- c(generation, indiv_num, disperse1D(mom[,3], zda(mom, disp_a_locus_1, disp_a_locus_last), zdb(mom, disp_b_locus_1, disp_b_locus_last)))
+	
+	# create the baby's genome
+	locus_vec <- seq(from = 4, to = total_genome_length+3)
+	
+	for (i in locus_vec){
+		if (i%%2 != 0){ # if this is an the first chromosome of a pair, inherit from mom at random
+			momallele = sample(c(i-1,i),1) # choose either the allele at locus i_1 or at locus i_2
+			baby[,i] = mom[,momallele]
+		}	else { # if this is an odd chromosome, inherit from dad at random
+				dadallele = sample(c(i,i+1),1) # choose either the allele at locus i_1 or at locus i_2 from dad's genome
+				baby[,i] = dad[,dadallele]	
+			}
+	}
+	
+	# now mutate if needed - assumes only one mutation occurs in any individual. This is an okay assumption when the probability of mutating is low and the pop size is not too large.
+	if (runif(1) < p_mut){
+		focal_locus <- sample(c(4:total_genome_length+3),1) # sample a random locus
+		mut_allele <- rnorm(1, baby[,focal_locus], sigma_mut)
+		baby[,focal_locus] <- mut_allele
+	}
+	return(baby)
+}
+
+
+
+make_offspring2 <- function(mom, dad, generation, indiv_num, p_mut){ 
 
 	# give the baby it's generation number and individual number
 	baby_vec_length = 3 + total_genome_length
@@ -342,8 +370,7 @@ make_offspring <- function(mom, dad, generation, indiv_num, p_mut){
 
 localdensity <- function(mom, current_population){
 	
-	distances <- abs(current_population[,3]-mom[,3])
-	normdistweights <- dnorm(distances,0,nbhd_width)
+	normdistweights <- sqrt(2*pi*(nbhd_width^2))*dnorm(current_population[,3],mom[,3],nbhd_width)
 	local_density <- sum(normdistweights) 
 
 	return(local_density)
@@ -374,8 +401,6 @@ disperse1D <- function(mom_loc, zda, zdb){
 }
 
 # A function to choose how far away a given seed disperses.
-
-
 
 # -------------------------------- (6) THE ENVIRONMENT -------------------------------- 
 

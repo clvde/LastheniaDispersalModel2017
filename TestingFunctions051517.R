@@ -55,7 +55,7 @@ e0 <- 10 #expoffspring(zmax_1, 10, 2*nstar, Rmax_1, zmax_1, k)
 noffspring <- 15 #reproduce(indiv_i, nstar, Rmax_1, zmax_1, k, current_population)
 dadIDs <- matefinder1D(noffspring, indiv_i, current_population, nbhd_width)
 dads_by_offnum <- convert_dads_list(dadIDs)
-baby <- make_offspring(indiv_i, pop[dads_by_offnum[1],], 1, 1)
+baby <- make_offspring(indiv_i, pop[dads_by_offnum[1],], 1, 1, p_mut)
 loc_dens <- localdensity(indiv_i, pop)
 loc_dens 
 indiv_i[,3]
