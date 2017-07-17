@@ -2,7 +2,7 @@
 # THIS SIMULATION PERFORMS A BURN IN
 
 # File Path - where do you want simualtion files to go?
-filepathspec = "/Users/Courtney/Documents/Rotation 3 - Melbourne & Flaxman Labs/Simulation Results/June 7th 2017 Burn In 3/"
+filepathspec = "/Users/Courtney/Documents/Melbourne & Flaxman Labs/Simulation Results/Env Change 3 Super Fast/"
 
 #Packages
 library(statmod)
@@ -25,8 +25,8 @@ p_mut <- 0.02
 sigma_mut <- 0.0015 
 nbhd_width <- 1 
 env_length <- 400 
-t_max <- 5000
-env_change_speed <- 0
+t_max <- 15000
+env_change_speed <- 1
 init_loc_mean <- 0
 k <- 1
 disp_a_allele <- 0.25
@@ -45,7 +45,9 @@ neut_locus_last <- neut_locus_1 + neut_loci*ploidy - 1
 
 # Output a list of parameter values to file
 params <- paste("meta_cols: ", meta_cols, "ploidy: ", ploidy, "disp_a_loci: ", disp_a_loci, "disp_b_loci: ", disp_b_loci, "env_loci: ", env_loci, "neut_loci: ", neut_loci, "total_genome_length: ", total_genome_length, "Rmax_green: ", Rmax_green, "Rmax_red: ", Rmax_red, "zmax_green: ", zmax_green, "zmax_red: ", zmax_red, "nstar: ", nstar, "p_mut: ", p_mut, "sigma_mut: ", sigma_mut, "nbhd_width: ", nbhd_width, "env_length: ", env_length, "t_max: ", t_max, "env_change_speed: ", env_change_speed, "init_loc_mean: ", init_loc_mean, "k: " , k, "disp_a_allele: ", disp_a_allele, "disp_b_allele: ", disp_b_allele, "env_allele: ", env_allele)
-write.csv(params, "/Users/Courtney/Documents/Rotation 3 - Melbourne & Flaxman Labs/Simulation Results/June 5th 2017 Burn In 2/params.txt")
+
+write.csv(params, "/Users/Courtney/Documents/Melbourne & Flaxman Labs/Simulation Results/Env Change 3 Super Fast/params.txt")
+
 
 # ---------------------------------------------------------
 # Simulation
@@ -58,7 +60,7 @@ write.csv(params, "/Users/Courtney/Documents/Rotation 3 - Melbourne & Flaxman La
 #write_name <- paste(filepathspec, "Burn_In_Gen", 0, ".csv", sep="")
 #write.csv(current_population, write_name)
 
-c_p <- read.csv(paste(filepathspec,"Burn_In_Gen1580.csv",sep=""))
+c_p <- read.csv(paste(filepathspec,"Burn_In3_Gen5000.csv",sep=""))
 head(current_population)
 
 c_p2 <- c_p[,-1]
@@ -67,7 +69,7 @@ current_population <- c_p2
 
 
 # Begin simulation loop
-for (t in c(1581:t_max)){
+for (t in c(1:t_max)){
 	
 	print(paste("generation: ",t))
 	
@@ -105,7 +107,7 @@ for (t in c(1581:t_max)){
 	
 	if (t%%10 == 0){
 		# write the parental generation to file before erasing them (annuals)
-		write_name <- paste(filepathspec, "Burn_In_Gen", t, ".csv", sep="")
+		write_name <- paste(filepathspec, "Env_Change_SF_BI3_Gen", t+5000, ".csv", sep="")
 		write.csv(current_population, file = write_name)
 	}
 	

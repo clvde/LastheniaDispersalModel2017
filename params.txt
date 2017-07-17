@@ -1,2 +1,0 @@
-"","x"
-"1","meta_cols:  3 ploidy:  2 disp_a_loci:  5 disp_b_loci:  5 env_loci:  5 neut_loci:  5 total_genome_length:  40 Rmax_green:  50 Rmax_red:  50 zmax_green:  -1 zmax_red:  1 nstar:  100 p_mut:  1e-05 sigma_mut:  0.001 nbhd_width:  1 env_length:  1000 t_max:  1000 env_change_speed:  0 init_loc_mean:  0 k:  1 disp_a_allele:  1 disp_b_allele:  2 env_allele:  -1"
