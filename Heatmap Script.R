@@ -11,7 +11,7 @@ maxgen_bi <- 5000
 mingen_bi <- 100
 maxgen <- 30000
 mingen <- 5100
-trait <- "Dispb"
+trait <- "Env"
 
 traitfileloc <- paste("/Users/Courtney/Documents/Melbourne & Flaxman Labs/Simulation Results/Burn In ",bi," Trait Data/",sep="")
 currentfile <- read.csv(paste(traitfileloc, trait, "_analyzed_Burn_In_",bi,"_Gen_",mingen_bi,".csv", sep=""))
@@ -51,8 +51,8 @@ bigdfsub[116956:116958,]
 #Dispa
 min(bigdfsub$Max)
 max(bigdfsub$Max)
-b <- c(0.18,0.25,0.32)
-ggplot(data = bigdfsub, aes(x = LocationBin, y = Generation)) + scale_fill_gradientn(limits = c(0.18,0.32), colours=c("#0072ff", "white", "#ff0000"), breaks=b, labels=format(b)) +theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_rect(fill = "black"), axis.line = element_line(colour = "black")) + geom_raster(aes(fill = Mean))
+b <- c(-1.06,-1,-0.94)
+ggplot(data = bigdfsub, aes(x = LocationBin, y = Generation)) + scale_fill_gradientn(limits = c(-1.06,-0.94), colours=c("#0072ff", "white", "#ff0000"), breaks=b, labels=format(b)) +theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_rect(fill = "black"), axis.line = element_line(colour = "black")) + geom_raster(aes(fill = Mean))
                                                                                                                                                                                                                                                                                                                                                                                                 
 
 #Dispb
